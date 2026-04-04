@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import Icon from "@/components/ui/icon";
+import YandexMap from "@/components/YandexMap";
 
 const HERO_IMG = "https://cdn.poehali.dev/projects/ab370efa-2244-49be-aa2e-79e9684ca6a9/files/a5dd6373-8db7-4512-ab7e-e160afb2de73.jpg";
 
@@ -50,6 +51,7 @@ const MASTERS = [
     distance: "0.8 км",
     avatar: "🔧",
     tags: ["Срочно", "Гарантия"],
+    coords: [55.7558, 37.6173] as [number, number],
   },
   {
     id: 2,
@@ -63,6 +65,7 @@ const MASTERS = [
     distance: "1.2 км",
     avatar: "⚡",
     tags: ["Гарантия"],
+    coords: [55.7620, 37.6090] as [number, number],
   },
   {
     id: 3,
@@ -76,6 +79,7 @@ const MASTERS = [
     distance: "2.1 км",
     avatar: "🔨",
     tags: ["Опыт 10 лет"],
+    coords: [55.7490, 37.6250] as [number, number],
   },
   {
     id: 4,
@@ -89,6 +93,7 @@ const MASTERS = [
     distance: "0.5 км",
     avatar: "🌿",
     tags: ["Новый"],
+    coords: [55.7580, 37.6220] as [number, number],
   },
 ];
 
@@ -824,54 +829,14 @@ const Index = () => {
               <p className="text-muted-foreground text-sm mt-1">Показаны мастера в радиусе 5 км</p>
             </div>
 
-            <div className="mx-4 rounded-3xl overflow-hidden bg-gradient-to-br from-sage-100 to-sage-200 relative h-64 flex items-center justify-center border border-sage-200">
-              <div className="absolute inset-0 opacity-20">
-                {[...Array(8)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="absolute border border-sage-400"
-                    style={{
-                      left: `${(i % 4) * 25}%`,
-                      top: `${Math.floor(i / 4) * 50}%`,
-                      width: "25%",
-                      height: "50%",
-                    }}
-                  />
-                ))}
-              </div>
-
-              {MASTERS.map((master, i) => (
-                <div
-                  key={master.id}
-                  className="absolute flex flex-col items-center animate-float"
-                  style={{
-                    left: `${20 + i * 18}%`,
-                    top: `${25 + (i % 2) * 35}%`,
-                    animationDelay: `${i * 0.5}s`,
-                  }}
-                >
-                  <div className="w-10 h-10 rounded-full bg-white shadow-lg border-2 border-warm-400 flex items-center justify-center text-lg">
-                    {master.avatar}
-                  </div>
-                  {master.verified && (
-                    <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full verified-badge flex items-center justify-center">
-                      <Icon name="Check" size={10} className="text-white" />
-                    </div>
-                  )}
-                  <div className="mt-1 bg-white rounded-lg px-1.5 py-0.5 shadow text-xs font-medium text-warm-700 whitespace-nowrap">
-                    ⭐ {master.rating}
-                  </div>
-                </div>
-              ))}
-
-              <div className="absolute w-5 h-5 rounded-full bg-terra-500 border-2 border-white shadow-lg flex items-center justify-center" style={{ left: "50%", top: "50%", transform: "translate(-50%, -50%)" }}>
-                <div className="w-2 h-2 rounded-full bg-white" />
-              </div>
-
-              <div className="absolute bottom-3 right-3 bg-white rounded-xl px-3 py-1.5 shadow text-xs text-muted-foreground">
-                📍 Ваш район
-              </div>
-            </div>
+            <YandexMap
+              center={[55.7558, 37.6173]}
+              masters={MASTERS}
+              onMasterClick={(m) => {
+                setActiveTab("catalog");
+                setSearchQuery(m.name);
+              }}
+            />
 
             <div className="mx-4 mt-3 flex items-center gap-4 text-xs text-muted-foreground">
               <div className="flex items-center gap-1.5">
