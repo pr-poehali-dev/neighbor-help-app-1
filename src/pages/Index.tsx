@@ -263,6 +263,22 @@ const Index = () => {
   const [authChecking, setAuthChecking] = useState(true);
   const [form, setForm] = useState({ name: "", email: "", password: "" });
 
+  const [userCoords, setUserCoords] = useState<[number, number]>([55.7558, 37.6173]);
+  const [geoStatus, setGeoStatus] = useState<"idle" | "loading" | "ok" | "denied">("idle");
+
+  const requestGeo = () => {
+    if (!navigator.geolocation) { setGeoStatus("denied"); return; }
+    setGeoStatus("loading");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setUserCoords([pos.coords.latitude, pos.coords.longitude]);
+        setGeoStatus("ok");
+      },
+      () => setGeoStatus("denied"),
+      { timeout: 8000 }
+    );
+  };
+
   const [orderMaster, setOrderMaster] = useState<(typeof MASTERS)[0] | null>(null);
   const [orderForm, setOrderForm] = useState({ description: "", date: "", time: "" });
   const [orderLoading, setOrderLoading] = useState(false);
@@ -824,13 +840,33 @@ const Index = () => {
         {/* MAP */}
         {activeTab === "map" && (
           <div className="animate-fade-in">
-            <div className="px-4 pt-4 mb-3">
-              <h2 className="font-display font-bold text-xl text-foreground">Мастера на карте</h2>
-              <p className="text-muted-foreground text-sm mt-1">Показаны мастера в радиусе 5 км</p>
+            <div className="px-4 pt-4 mb-3 flex items-center justify-between">
+              <div>
+                <h2 className="font-display font-bold text-xl text-foreground">Мастера на карте</h2>
+                <p className="text-muted-foreground text-sm mt-0.5">
+                  {geoStatus === "ok" && "📍 Ваше местоположение определено"}
+                  {geoStatus === "denied" && "⚠️ Геолокация недоступна"}
+                  {(geoStatus === "idle" || geoStatus === "loading") && "Показаны мастера в радиусе 5 км"}
+                </p>
+              </div>
+              <button
+                onClick={requestGeo}
+                disabled={geoStatus === "loading"}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
+                  geoStatus === "ok"
+                    ? "bg-sage-100 text-sage-700"
+                    : geoStatus === "denied"
+                    ? "bg-terra-50 text-terra-600"
+                    : "bg-warm-100 text-warm-700 hover:bg-warm-200"
+                }`}
+              >
+                <Icon name="LocateFixed" size={14} />
+                {geoStatus === "loading" ? "Поиск..." : geoStatus === "ok" ? "Найден" : "Найти меня"}
+              </button>
             </div>
 
             <YandexMap
-              center={[55.7558, 37.6173]}
+              center={userCoords}
               masters={MASTERS}
               onMasterClick={(m) => {
                 setActiveTab("catalog");
