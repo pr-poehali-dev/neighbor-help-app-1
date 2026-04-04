@@ -252,7 +252,7 @@ const Index = () => {
           <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-warm-400 to-terra-500 flex items-center justify-center shadow-sm">
             <span className="text-white text-sm">🏠</span>
           </div>
-          <span className="font-display font-bold text-lg text-warm-700">СоседМастер</span>
+          <span className="font-display font-bold text-lg text-warm-700">Сосед Поможет</span>
         </div>
         <div className="flex items-center gap-2">
           <button className="w-8 h-8 rounded-full bg-warm-100 flex items-center justify-center hover:bg-warm-200 transition-colors">
@@ -306,7 +306,7 @@ const Index = () => {
             <div className="px-4 mt-4 grid grid-cols-3 gap-3">
               {[
                 { value: "320+", label: "Мастеров", icon: "Users" },
-                { value: "4.8", label: "Рейтинг", icon: "Star" },
+                { value: "4.9", label: "Рейтинг", icon: "Star" },
                 { value: "98%", label: "Довольны", icon: "ThumbsUp" },
               ].map((stat) => (
                 <div key={stat.label} className="card-warm rounded-2xl p-3 text-center">
