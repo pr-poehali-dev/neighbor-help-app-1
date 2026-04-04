@@ -305,6 +305,10 @@ const Index = () => {
     if (activeTab === "profile" && user) fetchOrders();
   }, [activeTab, user]);
 
+  useEffect(() => {
+    if (activeTab === "map" && geoStatus === "idle") requestGeo();
+  }, [activeTab]);
+
   const handleAuth = async () => {
     setAuthError("");
     if (!form.email || !form.password) { setAuthError("Заполните все поля"); return; }
