@@ -126,14 +126,14 @@ export default function YandexMap({ masters, center, onMasterClick }: Props) {
 
   if (error) {
     return (
-      <div className="mx-4 h-72 rounded-3xl bg-warm-50 border border-warm-200 flex items-center justify-center" style={{ width: "calc(100% - 2rem)" }}>
+      <div className="mx-4 rounded-3xl bg-warm-50 border border-warm-200 flex items-center justify-center" style={{ width: "calc(100% - 2rem)", height: "56vw", maxHeight: "260px" }}>
         <p className="text-muted-foreground text-sm">Не удалось загрузить карту</p>
       </div>
     );
   }
 
   return (
-    <div className="relative mx-4 h-72 rounded-3xl overflow-hidden" style={{ width: "calc(100% - 2rem)" }}>
+    <div className="relative mx-4 rounded-3xl overflow-hidden" style={{ width: "calc(100% - 2rem)", height: "56vw", maxHeight: "260px" }}>
       {!ready && (
         <div className="absolute inset-0 bg-sage-100 flex items-center justify-center z-10">
           <div className="flex flex-col items-center gap-2">

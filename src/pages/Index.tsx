@@ -431,11 +431,12 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col max-w-md mx-auto bg-cream relative shadow-2xl">
+    <div className="min-h-screen flex flex-col max-w-md mx-auto bg-cream relative shadow-2xl overflow-x-hidden">
       {/* Auth Modal */}
       {showAuth && (
-        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm px-4 pb-4 sm:pb-0" onClick={() => setShowAuth(false)}>
-          <div className="w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl animate-scale-in" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 backdrop-blur-sm" style={{paddingBottom: "env(safe-area-inset-bottom)"}} onClick={() => setShowAuth(false)}>
+          <div className="w-full max-w-md bg-white rounded-t-3xl p-5 shadow-2xl animate-scale-in" onClick={e => e.stopPropagation()}>
+            <div className="w-10 h-1 rounded-full bg-warm-200 mx-auto mb-4" />
             <div className="flex items-center justify-between mb-5">
               <h2 className="font-display font-bold text-xl">
                 {authMode === "login" ? "Вход в аккаунт" : "Регистрация"}
@@ -511,8 +512,8 @@ const Index = () => {
 
       {/* Order Modal */}
       {orderMaster && (
-        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm px-4 pb-4 sm:pb-0" onClick={() => !orderLoading && setOrderMaster(null)}>
-          <div className="w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl animate-scale-in" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 backdrop-blur-sm" style={{paddingBottom: "env(safe-area-inset-bottom)"}} onClick={() => !orderLoading && setOrderMaster(null)}>
+          <div className="w-full max-w-md bg-white rounded-t-3xl p-5 shadow-2xl animate-scale-in max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             {orderSuccess ? (
               <div className="flex flex-col items-center py-6 gap-3">
                 <div className="w-16 h-16 rounded-full bg-sage-100 flex items-center justify-center">
@@ -523,6 +524,7 @@ const Index = () => {
               </div>
             ) : (
               <>
+                <div className="w-10 h-1 rounded-full bg-warm-200 mx-auto mb-4" />
                 <div className="flex items-center justify-between mb-5">
                   <h2 className="font-display font-bold text-xl">Заказать мастера</h2>
                   <button onClick={() => setOrderMaster(null)} className="w-8 h-8 rounded-xl bg-warm-100 flex items-center justify-center">
@@ -549,9 +551,9 @@ const Index = () => {
                       className="w-full bg-warm-50 border border-warm-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-warm-400 transition-colors resize-none"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Дата (необязательно)</label>
+                  <div className="flex gap-3">
+                    <div className="flex-1">
+                      <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Дата</label>
                       <input
                         type="date"
                         value={orderForm.date}
@@ -559,8 +561,8 @@ const Index = () => {
                         className="w-full bg-warm-50 border border-warm-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-warm-400 transition-colors"
                       />
                     </div>
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Время (необязательно)</label>
+                    <div className="flex-1">
+                      <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Время</label>
                       <input
                         type="time"
                         value={orderForm.time}
@@ -612,7 +614,7 @@ const Index = () => {
                 <div className="w-6 h-6 rounded-full bg-gradient-to-br from-terra-300 to-terra-500 flex items-center justify-center text-white text-xs font-bold">
                   {user.name.charAt(0).toUpperCase()}
                 </div>
-                <span className="text-xs font-medium text-warm-700 max-w-[80px] truncate">{user.name.split(" ")[0]}</span>
+                <span className="text-xs font-medium text-warm-700 max-w-[60px] truncate">{user.name.split(" ")[0]}</span>
               </button>
             </>
           ) : (
@@ -627,7 +629,7 @@ const Index = () => {
       </header>
 
       {/* Content */}
-      <main className="flex-1 overflow-y-auto pb-20">
+      <main className="flex-1 overflow-y-auto pb-safe overflow-x-hidden">
         {/* HOME */}
         {activeTab === "home" && (
           <div className="animate-fade-in">
@@ -636,12 +638,12 @@ const Index = () => {
               <img
                 src={HERO_IMG}
                 alt="Соседи помогают друг другу"
-                className="w-full h-52 object-cover"
+                className="w-full h-44 object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-warm-900/80 via-warm-800/40 to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 p-5">
-                <p className="font-handwritten text-2xl text-warm-200 mb-1">{user ? `Привет, ${user.name.split(" ")[0]}! 👋` : "Привет! 👋"}</p>
-                <h1 className="font-display font-bold text-2xl text-white leading-tight">
+                <p className="font-handwritten text-xl text-warm-200 mb-1">{user ? `Привет, ${user.name.split(" ")[0]}! 👋` : "Привет! 👋"}</p>
+                <h1 className="font-display font-bold text-xl text-white leading-tight">
                   Найди мастера<br />в своём районе
                 </h1>
               </div>
@@ -703,7 +705,7 @@ const Index = () => {
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${cat.color}`}>
                       <Icon name={cat.icon} size={18} />
                     </div>
-                    <span className="text-xs text-foreground font-medium leading-tight text-center">{cat.label}</span>
+                    <span className="text-[10px] text-foreground font-medium leading-tight text-center break-words w-full">{cat.label}</span>
                   </button>
                 ))}
               </div>
@@ -1144,7 +1146,7 @@ const Index = () => {
       </main>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white/95 backdrop-blur-md border-t border-warm-100 px-2 py-2 z-50">
+      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white/95 backdrop-blur-md border-t border-warm-100 px-2 pt-2 z-50 bottom-nav-safe">
         <div className="flex items-center justify-around">
           {(
             [
@@ -1158,14 +1160,14 @@ const Index = () => {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`flex flex-col items-center gap-1 px-3 py-1.5 rounded-2xl transition-all duration-200 ${
+              className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-2xl transition-all duration-200 min-w-0 flex-1 ${
                 activeTab === tab
                   ? "text-warm-600 bg-warm-100"
-                  : "text-muted-foreground hover:text-warm-500"
+                  : "text-muted-foreground active:text-warm-500"
               }`}
             >
-              <Icon name={icon} size={20} />
-              <span className="text-xs font-medium">{label}</span>
+              <Icon name={icon} size={22} />
+              <span className="text-[10px] font-medium truncate w-full text-center">{label}</span>
             </button>
           ))}
         </div>

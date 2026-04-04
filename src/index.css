@@ -42,27 +42,50 @@
     --sidebar-accent-foreground: 20 30% 20%;
     --sidebar-border: 30 25% 87%;
     --sidebar-ring: 25 85% 48%;
+
+    /* Safe area для iOS */
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-top: env(safe-area-inset-top, 0px);
   }
 }
 
 @layer base {
   * {
     @apply border-border;
+    -webkit-tap-highlight-color: transparent;
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    /* Запрет горизонтального скролла */
+    overflow-x: hidden;
   }
 
   body {
     @apply bg-background text-foreground font-sans;
     background-color: #faf6f0;
+    overflow-x: hidden;
+    /* Поддержка safe area на iOS */
+    padding-top: env(safe-area-inset-top);
   }
 
-  html {
-    scroll-behavior: smooth;
+  input,
+  textarea,
+  button {
+    font-family: inherit;
   }
 }
 
 @layer utilities {
   .hover-scale {
-    @apply transition-transform duration-200 hover:scale-105;
+    @apply transition-transform duration-200 active:scale-95;
+  }
+
+  @media (hover: hover) {
+    .hover-scale:hover {
+      transform: scale(1.05);
+    }
   }
 
   .card-warm {
@@ -81,7 +104,11 @@
   .btn-primary:hover {
     background: linear-gradient(135deg, #d45e10 0%, #a84008 100%);
     box-shadow: 0 6px 20px rgba(240, 120, 32, 0.45);
-    transform: translateY(-1px);
+  }
+
+  .btn-primary:active {
+    transform: scale(0.97);
+    box-shadow: 0 2px 8px rgba(240, 120, 32, 0.3);
   }
 
   .section-blob {
@@ -92,8 +119,8 @@
   .section-blob::before {
     content: "";
     position: absolute;
-    width: 400px;
-    height: 400px;
+    width: min(400px, 90vw);
+    height: min(400px, 90vw);
     border-radius: 50%;
     background: radial-gradient(
       circle,
@@ -110,5 +137,23 @@
 
   .rating-star {
     color: #ffc070;
+  }
+
+  /* Скрытый скроллбар */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Нижний отступ с учётом safe area */
+  .pb-safe {
+    padding-bottom: calc(5rem + var(--safe-bottom));
+  }
+
+  .bottom-nav-safe {
+    padding-bottom: calc(0.5rem + var(--safe-bottom));
   }
 }
