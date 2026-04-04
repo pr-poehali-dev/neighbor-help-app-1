@@ -1,0 +1,10 @@
+{
+  "tests": [
+    {
+      "name": "Returns config",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200
+    }
+  ]
+}

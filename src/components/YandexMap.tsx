@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
+const API_CONFIG = "https://functions.poehali.dev/3ccf1bc8-7608-4e95-aaad-fd29c4520b34";
+
 type YMaps = Record<string, unknown>;
 declare global {
   interface Window { ymaps: YMaps; }
@@ -22,20 +24,44 @@ interface Props {
   onMasterClick?: (master: Master) => void;
 }
 
+let ymapsLoadPromise: Promise<void> | null = null;
+
+function loadYmaps(apiKey: string): Promise<void> {
+  if (ymapsLoadPromise) return ymapsLoadPromise;
+  ymapsLoadPromise = new Promise((resolve, reject) => {
+    if (window.ymaps && typeof (window.ymaps as { ready?: unknown }).ready === "function") {
+      (window.ymaps as { ready: (fn: () => void) => void }).ready(resolve);
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = `https://api-maps.yandex.ru/2.1/?apikey=${apiKey}&lang=ru_RU`;
+    script.async = true;
+    script.onload = () => {
+      (window.ymaps as { ready: (fn: () => void) => void }).ready(resolve);
+    };
+    script.onerror = () => { ymapsLoadPromise = null; reject(); };
+    document.head.appendChild(script);
+  });
+  return ymapsLoadPromise;
+}
+
 export default function YandexMap({ masters, center, onMasterClick }: Props) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<YMaps | null>(null);
   const [ready, setReady] = useState(false);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
-    const check = () => {
-      if (window.ymaps && typeof (window.ymaps as Record<string, unknown>).ready === "function") {
-        (window.ymaps as { ready: (fn: () => void) => void }).ready(() => setReady(true));
-      } else {
-        setTimeout(check, 200);
-      }
-    };
-    check();
+    fetch(API_CONFIG)
+      .then(r => r.text())
+      .then(text => {
+        const data = JSON.parse(typeof JSON.parse(text) === "string" ? JSON.parse(text) : text);
+        const key = data.yandex_maps_key;
+        if (!key) { setError(true); return null; }
+        return loadYmaps(key);
+      })
+      .then((result) => { if (result !== null) setReady(true); })
+      .catch(() => setError(true));
   }, []);
 
   useEffect(() => {
@@ -52,20 +78,14 @@ export default function YandexMap({ masters, center, onMasterClick }: Props) {
       mapInstance.current = null;
     }
 
-    const map = new ymaps.Map(mapRef.current, {
-      center,
-      zoom: 14,
-      controls: ["zoomControl"],
-    });
-
+    const map = new ymaps.Map(mapRef.current, { center, zoom: 14, controls: ["zoomControl"] });
     (map as { behaviors: { disable: (s: string) => void } }).behaviors.disable("scrollZoom");
     mapInstance.current = map as YMaps;
 
-    // Метка "Вы"
-    const userMark = new ymaps.Placemark(center, { hintContent: "Вы здесь" }, { preset: "islands#redDotIcon" });
-    (map as { geoObjects: { add: (o: unknown) => void } }).geoObjects.add(userMark);
+    const geoObjects = (map as { geoObjects: { add: (o: unknown) => void } }).geoObjects;
 
-    // Метки мастеров
+    geoObjects.add(new ymaps.Placemark(center, { hintContent: "Вы здесь" }, { preset: "islands#redDotIcon" }));
+
     masters.forEach((master) => {
       const color = master.verified ? "#4A7F48" : "#F07820";
       const mark = new ymaps.Placemark(
@@ -90,12 +110,10 @@ export default function YandexMap({ masters, center, onMasterClick }: Props) {
           ),
         }
       );
-
       (mark as { events: { add: (e: string, fn: () => void) => void } }).events.add("click", () => {
         onMasterClick?.(master);
       });
-
-      (map as { geoObjects: { add: (o: unknown) => void } }).geoObjects.add(mark);
+      geoObjects.add(mark);
     });
 
     return () => {
@@ -106,11 +124,22 @@ export default function YandexMap({ masters, center, onMasterClick }: Props) {
     };
   }, [ready, center, masters]);
 
+  if (error) {
+    return (
+      <div className="mx-4 h-72 rounded-3xl bg-warm-50 border border-warm-200 flex items-center justify-center" style={{ width: "calc(100% - 2rem)" }}>
+        <p className="text-muted-foreground text-sm">Не удалось загрузить карту</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="relative w-full h-72 rounded-3xl overflow-hidden mx-4" style={{ width: "calc(100% - 2rem)" }}>
+    <div className="relative mx-4 h-72 rounded-3xl overflow-hidden" style={{ width: "calc(100% - 2rem)" }}>
       {!ready && (
-        <div className="absolute inset-0 bg-sage-100 flex items-center justify-center z-10 rounded-3xl">
-          <p className="text-muted-foreground text-sm">Загрузка карты...</p>
+        <div className="absolute inset-0 bg-sage-100 flex items-center justify-center z-10">
+          <div className="flex flex-col items-center gap-2">
+            <div className="w-8 h-8 rounded-full border-2 border-warm-400 border-t-transparent animate-spin" />
+            <p className="text-muted-foreground text-sm">Загрузка карты...</p>
+          </div>
         </div>
       )}
       <div ref={mapRef} className="w-full h-full" />
