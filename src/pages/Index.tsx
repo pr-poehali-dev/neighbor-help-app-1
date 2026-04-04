@@ -269,7 +269,7 @@ const Index = () => {
   useEffect(() => {
     const token = localStorage.getItem("sn_token");
     if (!token) { setAuthChecking(false); return; }
-    fetch(API_ME, { headers: { "Authorization": `Bearer ${token}` } })
+    fetch(API_ME, { headers: { "X-Authorization": `Bearer ${token}` } })
       .then(r => r.text())
       .then(text => {
         const data = JSON.parse(typeof JSON.parse(text) === "string" ? JSON.parse(text) : text);
@@ -318,7 +318,7 @@ const Index = () => {
     const token = localStorage.getItem("sn_token");
     if (!token) return;
     setOrdersLoading(true);
-    fetch(API_ORDER_LIST, { headers: { "Authorization": `Bearer ${token}` } })
+    fetch(API_ORDER_LIST, { headers: { "X-Authorization": `Bearer ${token}` } })
       .then(r => r.text())
       .then(text => {
         const data = JSON.parse(typeof JSON.parse(text) === "string" ? JSON.parse(text) : text);
@@ -337,7 +337,7 @@ const Index = () => {
       const token = localStorage.getItem("sn_token");
       const res = await fetch(API_ORDER_CREATE, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        headers: { "Content-Type": "application/json", "X-Authorization": `Bearer ${token}` },
         body: JSON.stringify({
           master_id: orderMaster.id,
           description: orderForm.description,
