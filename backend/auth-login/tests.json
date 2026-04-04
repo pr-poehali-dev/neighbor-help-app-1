@@ -1,0 +1,25 @@
+{
+  "tests": [
+    {
+      "name": "Login with wrong password",
+      "method": "POST",
+      "path": "/",
+      "body": {"email": "test_reg_88712@example.com", "password": "wrongpass"},
+      "expectedStatus": 401
+    },
+    {
+      "name": "Login with correct password",
+      "method": "POST",
+      "path": "/",
+      "body": {"email": "test_reg_88712@example.com", "password": "password123"},
+      "expectedStatus": 200
+    },
+    {
+      "name": "Empty fields",
+      "method": "POST",
+      "path": "/",
+      "body": {"email": "", "password": ""},
+      "expectedStatus": 400
+    }
+  ]
+}

@@ -1,7 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Icon from "@/components/ui/icon";
 
 const HERO_IMG = "https://cdn.poehali.dev/projects/ab370efa-2244-49be-aa2e-79e9684ca6a9/files/a5dd6373-8db7-4512-ab7e-e160afb2de73.jpg";
+
+const API_REGISTER = "https://functions.poehali.dev/79cdc81a-3cea-4057-b6e3-50630a685c7b";
+const API_LOGIN    = "https://functions.poehali.dev/cf908c86-a07c-452d-aaca-e5c95d27766d";
+const API_ME       = "https://functions.poehali.dev/0d927dc2-0457-4935-afcd-3b313289b6a4";
+
+interface User { id: number; name: string; email: string; }
+
+type AuthMode = "login" | "register";
 
 const CATEGORIES = [
   { icon: "Wrench", label: "Сантехника", count: 48, color: "bg-blue-100 text-blue-600" },
@@ -222,6 +230,57 @@ const Index = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
+  const [user, setUser] = useState<User | null>(null);
+  const [authMode, setAuthMode] = useState<AuthMode>("login");
+  const [showAuth, setShowAuth] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState("");
+  const [authChecking, setAuthChecking] = useState(true);
+  const [form, setForm] = useState({ name: "", email: "", password: "" });
+
+  useEffect(() => {
+    const token = localStorage.getItem("sn_token");
+    if (!token) { setAuthChecking(false); return; }
+    fetch(API_ME, { headers: { "Authorization": `Bearer ${token}` } })
+      .then(r => r.text())
+      .then(text => {
+        const data = JSON.parse(typeof JSON.parse(text) === "string" ? JSON.parse(text) : text);
+        if (data.id) setUser(data);
+        else localStorage.removeItem("sn_token");
+      })
+      .catch(() => localStorage.removeItem("sn_token"))
+      .finally(() => setAuthChecking(false));
+  }, []);
+
+  const handleAuth = async () => {
+    setAuthError("");
+    if (!form.email || !form.password) { setAuthError("Заполните все поля"); return; }
+    if (authMode === "register" && !form.name) { setAuthError("Введите имя"); return; }
+    setAuthLoading(true);
+    try {
+      const url = authMode === "register" ? API_REGISTER : API_LOGIN;
+      const body: Record<string, string> = { email: form.email, password: form.password };
+      if (authMode === "register") body.name = form.name;
+      const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const text = await res.text();
+      const parsed = JSON.parse(typeof JSON.parse(text) === "string" ? JSON.parse(text) : text);
+      if (!res.ok) { setAuthError(parsed.error || "Ошибка"); return; }
+      localStorage.setItem("sn_token", parsed.token);
+      setUser(parsed.user);
+      setShowAuth(false);
+      setForm({ name: "", email: "", password: "" });
+    } catch {
+      setAuthError("Ошибка сети, попробуйте снова");
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("sn_token");
+    setUser(null);
+  };
+
   const filteredMasters = MASTERS.filter((m) => {
     const matchQuery =
       !searchQuery ||
@@ -244,8 +303,98 @@ const Index = () => {
     }, 800);
   };
 
+  if (authChecking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-cream">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-warm-400 to-terra-500 flex items-center justify-center shadow-lg animate-float">
+            <span className="text-2xl">🏠</span>
+          </div>
+          <p className="text-muted-foreground text-sm">Загрузка...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col max-w-md mx-auto bg-cream relative shadow-2xl">
+      {/* Auth Modal */}
+      {showAuth && (
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm px-4 pb-4 sm:pb-0" onClick={() => setShowAuth(false)}>
+          <div className="w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl animate-scale-in" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="font-display font-bold text-xl">
+                {authMode === "login" ? "Вход в аккаунт" : "Регистрация"}
+              </h2>
+              <button onClick={() => setShowAuth(false)} className="w-8 h-8 rounded-xl bg-warm-100 flex items-center justify-center">
+                <Icon name="X" size={16} className="text-warm-600" />
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              {authMode === "register" && (
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Ваше имя</label>
+                  <input
+                    type="text"
+                    placeholder="Иван Иванов"
+                    value={form.name}
+                    onChange={e => setForm(f => ({...f, name: e.target.value}))}
+                    className="w-full bg-warm-50 border border-warm-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-warm-400 transition-colors"
+                  />
+                </div>
+              )}
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Email</label>
+                <input
+                  type="email"
+                  placeholder="ivan@example.com"
+                  value={form.email}
+                  onChange={e => setForm(f => ({...f, email: e.target.value}))}
+                  className="w-full bg-warm-50 border border-warm-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-warm-400 transition-colors"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Пароль</label>
+                <input
+                  type="password"
+                  placeholder="Минимум 6 символов"
+                  value={form.password}
+                  onChange={e => setForm(f => ({...f, password: e.target.value}))}
+                  onKeyDown={e => e.key === "Enter" && handleAuth()}
+                  className="w-full bg-warm-50 border border-warm-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-warm-400 transition-colors"
+                />
+              </div>
+
+              {authError && (
+                <div className="bg-terra-50 border border-terra-200 rounded-xl px-4 py-2.5 flex items-center gap-2">
+                  <Icon name="AlertCircle" size={15} className="text-terra-500 flex-shrink-0" />
+                  <span className="text-terra-700 text-sm">{authError}</span>
+                </div>
+              )}
+
+              <button
+                onClick={handleAuth}
+                disabled={authLoading}
+                className="btn-primary text-white font-semibold py-3 rounded-xl transition-all duration-200 disabled:opacity-60 mt-1"
+              >
+                {authLoading ? "Подождите..." : authMode === "login" ? "Войти" : "Создать аккаунт"}
+              </button>
+
+              <p className="text-center text-sm text-muted-foreground">
+                {authMode === "login" ? "Ещё нет аккаунта? " : "Уже есть аккаунт? "}
+                <button
+                  onClick={() => { setAuthMode(authMode === "login" ? "register" : "login"); setAuthError(""); }}
+                  className="text-warm-600 font-medium"
+                >
+                  {authMode === "login" ? "Зарегистрироваться" : "Войти"}
+                </button>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-warm-100 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -255,12 +404,29 @@ const Index = () => {
           <span className="font-display font-bold text-lg text-warm-700">Сосед Поможет</span>
         </div>
         <div className="flex items-center gap-2">
-          <button className="w-8 h-8 rounded-full bg-warm-100 flex items-center justify-center hover:bg-warm-200 transition-colors">
-            <Icon name="Bell" size={16} className="text-warm-600" />
-          </button>
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-terra-300 to-terra-500 flex items-center justify-center text-white text-sm font-bold">
-            А
-          </div>
+          {user ? (
+            <>
+              <button className="w-8 h-8 rounded-full bg-warm-100 flex items-center justify-center hover:bg-warm-200 transition-colors">
+                <Icon name="Bell" size={16} className="text-warm-600" />
+              </button>
+              <button
+                onClick={() => setActiveTab("profile")}
+                className="flex items-center gap-1.5 bg-warm-100 hover:bg-warm-200 transition-colors rounded-full pl-1.5 pr-3 py-1"
+              >
+                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-terra-300 to-terra-500 flex items-center justify-center text-white text-xs font-bold">
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
+                <span className="text-xs font-medium text-warm-700 max-w-[80px] truncate">{user.name.split(" ")[0]}</span>
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => { setShowAuth(true); setAuthMode("login"); setAuthError(""); }}
+              className="btn-primary text-white text-xs font-semibold px-4 py-2 rounded-xl transition-all duration-200"
+            >
+              Войти
+            </button>
+          )}
         </div>
       </header>
 
@@ -278,7 +444,7 @@ const Index = () => {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-warm-900/80 via-warm-800/40 to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 p-5">
-                <p className="font-handwritten text-2xl text-warm-200 mb-1">Привет, Алексей! 👋</p>
+                <p className="font-handwritten text-2xl text-warm-200 mb-1">{user ? `Привет, ${user.name.split(" ")[0]}! 👋` : "Привет! 👋"}</p>
                 <h1 className="font-display font-bold text-2xl text-white leading-tight">
                   Найди мастера<br />в своём районе
                 </h1>
@@ -589,22 +755,38 @@ const Index = () => {
         {/* PROFILE */}
         {activeTab === "profile" && (
           <div className="animate-fade-in">
+            {!user && (
+              <div className="px-4 pt-12 pb-8 flex flex-col items-center gap-4">
+                <div className="w-20 h-20 rounded-3xl bg-warm-100 flex items-center justify-center text-5xl">👤</div>
+                <h3 className="font-display font-bold text-xl text-foreground">Вы не вошли</h3>
+                <p className="text-muted-foreground text-sm text-center">Войдите, чтобы видеть историю заказов и настройки</p>
+                <button
+                  onClick={() => { setShowAuth(true); setAuthMode("login"); setAuthError(""); }}
+                  className="btn-primary text-white font-semibold px-8 py-3 rounded-2xl transition-all duration-200"
+                >
+                  Войти в аккаунт
+                </button>
+                <button
+                  onClick={() => { setShowAuth(true); setAuthMode("register"); setAuthError(""); }}
+                  className="text-warm-600 font-medium text-sm"
+                >
+                  Создать аккаунт
+                </button>
+              </div>
+            )}
+            {user && (<>
             <div className="bg-gradient-to-b from-warm-100 to-cream px-4 pt-6 pb-4">
               <div className="flex items-center gap-4">
                 <div className="relative">
-                  <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-warm-300 to-terra-400 flex items-center justify-center text-4xl shadow-lg">
-                    👤
+                  <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-warm-300 to-terra-400 flex items-center justify-center text-4xl shadow-lg font-bold text-white">
+                    {user.name.charAt(0).toUpperCase()}
                   </div>
-                  <button className="absolute -bottom-1 -right-1 w-7 h-7 rounded-xl bg-warm-500 flex items-center justify-center shadow">
-                    <Icon name="Pencil" size={12} className="text-white" />
-                  </button>
                 </div>
                 <div>
-                  <h2 className="font-display font-bold text-xl text-foreground">Алексей Новиков</h2>
-                  <p className="text-muted-foreground text-sm">📍 Москва, Хамовники</p>
+                  <h2 className="font-display font-bold text-xl text-foreground">{user.name}</h2>
+                  <p className="text-muted-foreground text-sm">{user.email}</p>
                   <div className="flex items-center gap-1.5 mt-1">
-                    <span className="text-xs bg-warm-100 text-warm-700 px-2 py-0.5 rounded-full font-medium">12 заказов</span>
-                    <span className="text-xs bg-sage-100 text-sage-700 px-2 py-0.5 rounded-full font-medium">Постоянный клиент</span>
+                    <span className="text-xs bg-sage-100 text-sage-700 px-2 py-0.5 rounded-full font-medium">Клиент</span>
                   </div>
                 </div>
               </div>
@@ -662,6 +844,7 @@ const Index = () => {
                 ].map((item, i, arr) => (
                   <button
                     key={item.label}
+                    onClick={item.danger ? handleLogout : undefined}
                     className={`w-full flex items-center gap-3 px-4 py-3.5 hover:bg-warm-50 transition-colors text-left ${
                       i < arr.length - 1 ? "border-b border-warm-100" : ""
                     }`}
@@ -681,6 +864,7 @@ const Index = () => {
                 ))}
               </div>
             </div>
+            </>)}
           </div>
         )}
 

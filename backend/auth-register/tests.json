@@ -1,0 +1,25 @@
+{
+  "tests": [
+    {
+      "name": "Register new user",
+      "method": "POST",
+      "path": "/",
+      "body": {"name": "Тест Тестов", "email": "test_new_55531@example.com", "password": "password123"},
+      "expectedStatus": 200
+    },
+    {
+      "name": "Empty fields",
+      "method": "POST",
+      "path": "/",
+      "body": {"name": "", "email": "", "password": ""},
+      "expectedStatus": 400
+    },
+    {
+      "name": "Duplicate email",
+      "method": "POST",
+      "path": "/",
+      "body": {"name": "Другой", "email": "test_reg_88712@example.com", "password": "password123"},
+      "expectedStatus": 409
+    }
+  ]
+}
