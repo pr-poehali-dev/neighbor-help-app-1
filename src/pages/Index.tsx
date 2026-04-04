@@ -3,11 +3,26 @@ import Icon from "@/components/ui/icon";
 
 const HERO_IMG = "https://cdn.poehali.dev/projects/ab370efa-2244-49be-aa2e-79e9684ca6a9/files/a5dd6373-8db7-4512-ab7e-e160afb2de73.jpg";
 
-const API_REGISTER = "https://functions.poehali.dev/79cdc81a-3cea-4057-b6e3-50630a685c7b";
-const API_LOGIN    = "https://functions.poehali.dev/cf908c86-a07c-452d-aaca-e5c95d27766d";
-const API_ME       = "https://functions.poehali.dev/0d927dc2-0457-4935-afcd-3b313289b6a4";
+const API_REGISTER     = "https://functions.poehali.dev/79cdc81a-3cea-4057-b6e3-50630a685c7b";
+const API_LOGIN        = "https://functions.poehali.dev/cf908c86-a07c-452d-aaca-e5c95d27766d";
+const API_ME           = "https://functions.poehali.dev/0d927dc2-0457-4935-afcd-3b313289b6a4";
+const API_ORDER_CREATE = "https://functions.poehali.dev/5b714980-bc3a-47fd-9836-c76983f483c4";
+const API_ORDER_LIST   = "https://functions.poehali.dev/f84a6bc2-e724-4ab5-b2be-7270d8454e00";
 
 interface User { id: number; name: string; email: string; }
+interface Order {
+  id: number;
+  description: string;
+  scheduled_date: string | null;
+  scheduled_time: string | null;
+  status: string;
+  status_label: string;
+  price_estimate: number | null;
+  created_at: string;
+  master_name: string;
+  master_specialty: string;
+  master_avatar: string;
+}
 
 type AuthMode = "login" | "register";
 
@@ -120,9 +135,11 @@ type Tab = "home" | "catalog" | "map" | "profile" | "chat";
 function MasterCard({
   master,
   onChat,
+  onOrder,
 }: {
   master: (typeof MASTERS)[0];
   onChat: () => void;
+  onOrder: (master: (typeof MASTERS)[0]) => void;
 }) {
   return (
     <div className="card-warm rounded-3xl p-4">
@@ -189,7 +206,10 @@ function MasterCard({
           <Icon name="MessageCircle" size={15} />
           Написать
         </button>
-        <button className="flex-1 flex items-center justify-center gap-1.5 btn-primary rounded-xl py-2 text-sm text-white font-medium transition-all duration-200">
+        <button
+          onClick={() => onOrder(master)}
+          className="flex-1 flex items-center justify-center gap-1.5 btn-primary rounded-xl py-2 text-sm text-white font-medium transition-all duration-200"
+        >
           <Icon name="CalendarCheck" size={15} />
           Заказать
         </button>
@@ -238,6 +258,14 @@ const Index = () => {
   const [authChecking, setAuthChecking] = useState(true);
   const [form, setForm] = useState({ name: "", email: "", password: "" });
 
+  const [orderMaster, setOrderMaster] = useState<(typeof MASTERS)[0] | null>(null);
+  const [orderForm, setOrderForm] = useState({ description: "", date: "", time: "" });
+  const [orderLoading, setOrderLoading] = useState(false);
+  const [orderSuccess, setOrderSuccess] = useState(false);
+  const [orderError, setOrderError] = useState("");
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+
   useEffect(() => {
     const token = localStorage.getItem("sn_token");
     if (!token) { setAuthChecking(false); return; }
@@ -245,12 +273,16 @@ const Index = () => {
       .then(r => r.text())
       .then(text => {
         const data = JSON.parse(typeof JSON.parse(text) === "string" ? JSON.parse(text) : text);
-        if (data.id) setUser(data);
+        if (data.id) { setUser(data); }
         else localStorage.removeItem("sn_token");
       })
       .catch(() => localStorage.removeItem("sn_token"))
       .finally(() => setAuthChecking(false));
   }, []);
+
+  useEffect(() => {
+    if (activeTab === "profile" && user) fetchOrders();
+  }, [activeTab, user]);
 
   const handleAuth = async () => {
     setAuthError("");
@@ -279,6 +311,63 @@ const Index = () => {
   const handleLogout = () => {
     localStorage.removeItem("sn_token");
     setUser(null);
+    setOrders([]);
+  };
+
+  const fetchOrders = () => {
+    const token = localStorage.getItem("sn_token");
+    if (!token) return;
+    setOrdersLoading(true);
+    fetch(API_ORDER_LIST, { headers: { "Authorization": `Bearer ${token}` } })
+      .then(r => r.text())
+      .then(text => {
+        const data = JSON.parse(typeof JSON.parse(text) === "string" ? JSON.parse(text) : text);
+        if (data.orders) setOrders(data.orders);
+      })
+      .catch(() => {})
+      .finally(() => setOrdersLoading(false));
+  };
+
+  const handleOrderSubmit = async () => {
+    if (!orderMaster) return;
+    if (!orderForm.description.trim()) { setOrderError("Опишите задачу"); return; }
+    setOrderLoading(true);
+    setOrderError("");
+    try {
+      const token = localStorage.getItem("sn_token");
+      const res = await fetch(API_ORDER_CREATE, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify({
+          master_id: orderMaster.id,
+          description: orderForm.description,
+          scheduled_date: orderForm.date || null,
+          scheduled_time: orderForm.time || null,
+        }),
+      });
+      const text = await res.text();
+      const data = JSON.parse(typeof JSON.parse(text) === "string" ? JSON.parse(text) : text);
+      if (!res.ok) { setOrderError(data.error || "Ошибка"); return; }
+      setOrderSuccess(true);
+      fetchOrders();
+      setTimeout(() => {
+        setOrderMaster(null);
+        setOrderSuccess(false);
+        setOrderForm({ description: "", date: "", time: "" });
+      }, 2000);
+    } catch {
+      setOrderError("Ошибка сети, попробуйте снова");
+    } finally {
+      setOrderLoading(false);
+    }
+  };
+
+  const openOrder = (master: (typeof MASTERS)[0]) => {
+    if (!user) { setShowAuth(true); setAuthMode("login"); setAuthError(""); return; }
+    setOrderMaster(master);
+    setOrderForm({ description: "", date: "", time: "" });
+    setOrderError("");
+    setOrderSuccess(false);
   };
 
   const filteredMasters = MASTERS.filter((m) => {
@@ -391,6 +480,88 @@ const Index = () => {
                 </button>
               </p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Order Modal */}
+      {orderMaster && (
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm px-4 pb-4 sm:pb-0" onClick={() => !orderLoading && setOrderMaster(null)}>
+          <div className="w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl animate-scale-in" onClick={e => e.stopPropagation()}>
+            {orderSuccess ? (
+              <div className="flex flex-col items-center py-6 gap-3">
+                <div className="w-16 h-16 rounded-full bg-sage-100 flex items-center justify-center">
+                  <Icon name="CheckCircle" size={36} className="text-sage-500" />
+                </div>
+                <h3 className="font-display font-bold text-xl text-foreground">Заявка отправлена!</h3>
+                <p className="text-muted-foreground text-sm text-center">Мастер свяжется с вами в ближайшее время</p>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-5">
+                  <h2 className="font-display font-bold text-xl">Заказать мастера</h2>
+                  <button onClick={() => setOrderMaster(null)} className="w-8 h-8 rounded-xl bg-warm-100 flex items-center justify-center">
+                    <Icon name="X" size={16} className="text-warm-600" />
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-3 p-3 bg-warm-50 rounded-2xl mb-4">
+                  <div className="w-12 h-12 rounded-xl bg-warm-100 flex items-center justify-center text-2xl">{orderMaster.avatar}</div>
+                  <div>
+                    <div className="font-semibold text-sm">{orderMaster.name}</div>
+                    <div className="text-muted-foreground text-xs">{orderMaster.specialty} · {orderMaster.price}</div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Опишите задачу *</label>
+                    <textarea
+                      placeholder="Например: течёт кран на кухне, нужно заменить прокладку..."
+                      value={orderForm.description}
+                      onChange={e => setOrderForm(f => ({...f, description: e.target.value}))}
+                      rows={3}
+                      className="w-full bg-warm-50 border border-warm-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-warm-400 transition-colors resize-none"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Дата (необязательно)</label>
+                      <input
+                        type="date"
+                        value={orderForm.date}
+                        onChange={e => setOrderForm(f => ({...f, date: e.target.value}))}
+                        className="w-full bg-warm-50 border border-warm-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-warm-400 transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Время (необязательно)</label>
+                      <input
+                        type="time"
+                        value={orderForm.time}
+                        onChange={e => setOrderForm(f => ({...f, time: e.target.value}))}
+                        className="w-full bg-warm-50 border border-warm-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-warm-400 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  {orderError && (
+                    <div className="bg-terra-50 border border-terra-200 rounded-xl px-4 py-2.5 flex items-center gap-2">
+                      <Icon name="AlertCircle" size={15} className="text-terra-500 flex-shrink-0" />
+                      <span className="text-terra-700 text-sm">{orderError}</span>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={handleOrderSubmit}
+                    disabled={orderLoading}
+                    className="btn-primary text-white font-semibold py-3 rounded-xl transition-all duration-200 disabled:opacity-60 mt-1"
+                  >
+                    {orderLoading ? "Отправляем..." : "Отправить заявку"}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -526,7 +697,7 @@ const Index = () => {
               </div>
               <div className="flex flex-col gap-3">
                 {MASTERS.slice(0, 2).map((master) => (
-                  <MasterCard key={master.id} master={master} onChat={() => setActiveTab("chat")} />
+                  <MasterCard key={master.id} master={master} onChat={() => setActiveTab("chat")} onOrder={openOrder} />
                 ))}
               </div>
             </div>
@@ -623,7 +794,7 @@ const Index = () => {
               <div className="flex flex-col gap-3">
                 {filteredMasters.length > 0 ? (
                   filteredMasters.map((master) => (
-                    <MasterCard key={master.id} master={master} onChat={() => setActiveTab("chat")} />
+                    <MasterCard key={master.id} master={master} onChat={() => setActiveTab("chat")} onOrder={openOrder} />
                   ))
                 ) : (
                   <div className="text-center py-12">
@@ -793,9 +964,9 @@ const Index = () => {
 
               <div className="grid grid-cols-3 gap-3 mt-4">
                 {[
-                  { value: "12", label: "Заказов" },
-                  { value: "4", label: "Мастера" },
-                  { value: "₽24к", label: "Потрачено" },
+                  { value: String(orders.length || "0"), label: "Заказов" },
+                  { value: String(new Set(orders.map(o => o.master_name)).size || "0"), label: "Мастера" },
+                  { value: orders.length ? `₽${Math.round(orders.reduce((s, o) => s + (o.price_estimate || 0), 0) / 1000)}к` : "₽0", label: "Потрачено" },
                 ].map((s) => (
                   <div key={s.label} className="bg-white rounded-2xl p-3 text-center shadow-sm">
                     <div className="font-display font-bold text-warm-600 text-lg">{s.value}</div>
@@ -806,29 +977,60 @@ const Index = () => {
             </div>
 
             <div className="px-4 mt-4">
-              <h3 className="font-display font-semibold text-base mb-3">История заказов</h3>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-display font-semibold text-base">История заказов</h3>
+                {ordersLoading && <span className="text-muted-foreground text-xs">Загрузка...</span>}
+              </div>
               <div className="flex flex-col gap-3">
-                {[
-                  { service: "Починка крана", master: "Андрей Петров", date: "28 марта", price: "1 200 ₽", status: "Завершён", statusColor: "text-sage-600 bg-sage-50" },
-                  { service: "Замена розетки", master: "Ольга Смирнова", date: "15 марта", price: "800 ₽", status: "Завершён", statusColor: "text-sage-600 bg-sage-50" },
-                  { service: "Поклейка обоев", master: "Дмитрий Козлов", date: "2 марта", price: "4 500 ₽", status: "Завершён", statusColor: "text-sage-600 bg-sage-50" },
-                  { service: "Стрижка газона", master: "Мария Иванова", date: "18 февраля", price: "600 ₽", status: "Отменён", statusColor: "text-terra-600 bg-terra-50" },
-                ].map((order, i) => (
-                  <div key={i} className="card-warm rounded-2xl p-4">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <div className="font-semibold text-sm text-foreground">{order.service}</div>
-                        <div className="text-muted-foreground text-xs mt-0.5">{order.master} · {order.date}</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-bold text-warm-700 text-sm">{order.price}</div>
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full mt-1 inline-block ${order.statusColor}`}>
-                          {order.status}
-                        </span>
+                {orders.length === 0 && !ordersLoading && (
+                  <div className="text-center py-8">
+                    <span className="text-3xl">📋</span>
+                    <p className="text-muted-foreground text-sm mt-2">Заказов пока нет</p>
+                    <button
+                      onClick={() => setActiveTab("catalog")}
+                      className="mt-3 btn-primary text-white text-sm font-medium px-5 py-2 rounded-xl transition-all duration-200"
+                    >
+                      Найти мастера
+                    </button>
+                  </div>
+                )}
+                {orders.map((order) => {
+                  const isNew = order.status === "new";
+                  const isDone = order.status === "done";
+                  const isCancelled = order.status === "cancelled";
+                  const statusColor = isDone
+                    ? "text-sage-600 bg-sage-50"
+                    : isCancelled
+                    ? "text-terra-600 bg-terra-50"
+                    : "text-warm-700 bg-warm-100";
+                  const dateStr = order.scheduled_date
+                    ? new Date(order.scheduled_date).toLocaleDateString("ru-RU", { day: "numeric", month: "long" })
+                    : new Date(order.created_at).toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
+                  return (
+                    <div key={order.id} className="card-warm rounded-2xl p-4">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-2.5 min-w-0">
+                          <div className="w-9 h-9 rounded-xl bg-warm-100 flex items-center justify-center text-lg flex-shrink-0">{order.master_avatar}</div>
+                          <div className="min-w-0">
+                            <div className="font-semibold text-sm text-foreground truncate">{order.description}</div>
+                            <div className="text-muted-foreground text-xs mt-0.5">{order.master_name} · {dateStr}</div>
+                            {order.scheduled_time && (
+                              <div className="text-muted-foreground text-xs">{order.scheduled_time}</div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          {order.price_estimate && (
+                            <div className="font-bold text-warm-700 text-sm">от {order.price_estimate} ₽</div>
+                          )}
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full mt-1 inline-block ${statusColor}`}>
+                            {isNew ? "🕐 Новый" : order.status_label}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 

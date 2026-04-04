@@ -1,0 +1,18 @@
+{
+  "tests": [
+    {
+      "name": "No token returns 401",
+      "method": "POST",
+      "path": "/",
+      "body": {"master_id": 1, "description": "Починить кран"},
+      "expectedStatus": 401
+    },
+    {
+      "name": "Missing description returns 400",
+      "method": "POST",
+      "path": "/",
+      "body": {"master_id": 1, "description": ""},
+      "expectedStatus": 401
+    }
+  ]
+}
